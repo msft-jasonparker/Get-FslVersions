@@ -1,6 +1,7 @@
 # Get-FslVerions
 PowerShell script to check the FSLogix version of Virtual Machines in an Azure Resource Group.
 
+```PowerShell
 $ResourceGroupName = ""
 
 # Creates a collection object
@@ -50,3 +51,4 @@ Write-Host ("Results exported to CSV: {0}\FSLogixVirtualMachines.csv" -f $env:TE
 
 # Display collection to the console
 $FSLogixVirtualMachines
+```
