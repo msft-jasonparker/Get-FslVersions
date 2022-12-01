@@ -1,54 +1,33 @@
-# Get-FslVerions
-PowerShell script to check the FSLogix version of Virtual Machines in an Azure Resource Group.
+# FSLogix Version Validation
+
+The script in this repository can be used to check or validate the version of FSLogix running on one (1) or more Virtual Machines running in your environment.  This script assumes the user running it has administrative rights to the VM(s) and that [PowerShell remoting](https://learn.microsoft.com/en-us/powershell/scripting/learn/remoting/running-remote-commands?view=powershell-5.1#windows-powershell-remoting) is working and enabled in the environment.
+
+This script will produce an object that can be stored into a variable, saved to a file or exported into a comma-separated (CSV) file.
+
+## Examples
+
+Below are a few examples of how this script could be run.
+
+### Local Computer
+
+Will collect FSLogix version information on the local computer.
 
 ```PowerShell
-$ResourceGroupName = ""
+Get-FslVersion.ps1
+```
 
-# Creates a collection object
-[System.Collections.Generic.List[System.Object]]$FSLogixVirtualMachines = @()
+### Multiple VM(s) using the parameter
 
-Write-Host ("Checking VM's in Resource Group: {0}" -f $ResourceGroupName)
+Will collect FSLogix version information from Computer1 and Computer2 and save the data to a CSV file.
 
-# Get all VMs in the Resource Group with PowerState information
-$VMsToCheck = Get-AzVM -ResourceGroupName $ResourceGroupName -Status
-$i = 0
+```PowerShell
+Get-FslVersion.ps1 -ComputerNames "Computer1","Computer2" | Export-Csv -Path $ENV:TEMP\fsl_version_info.csv -NoTypeInformation
+```
 
-# Loop through each VM in the collection
-Foreach ($VirtualMachine in $VMsToCheck) {
+### Multiple VM(s) from the pipeline
 
-    # Show progress of the operation
-    Write-Progress -Activity "Verifying FSLogix Installed Version" -Status ("Working on {0} of {1} VMs" -f ($i+1),$VMsToCheck.Count) -CurrentOperation ("Current VM: {0}" -f $VirtualMachine.Name) -PercentComplete (($i / $VMsToCheck.Count) * 100)
-    
-    # Create an object to store the results (new object for each VM)
-    $vmObject = $null
-    $vmObject = [PSCustomObject]@{
-        VMName = $VirtualMachine.Name
-        ResourceGroup = $VirtualMachine.ResourceGroupName
-        State = $VirtualMachine.PowerState
-        FslVersion = "Unknown"
-    }
+Takes the computer names from the pipeline, collects the FSLogix version information and stores the information into the $Results variable with Verbose output
 
-    # Check the VM PowerState before calling Invoke-AzVMRunCommand
-    If ($vmObject.State -eq "VM running") {
-        # Use Invoke-AzVMRunCommand to call a PowerShell command and store the results
-        $results = $VirtualMachine | Invoke-AzVMRunCommand -CommandId RunPowerShellScript -ScriptString "(Get-ItemProperty -Path HKLM:\SOFTWARE\FSLogix\Apps).InstallVersion"
-        
-        # Add the results to the object and add the object to the collection
-        $vmObject.FslVersion = $results.Value[0].Message
-        $FSLogixVirtualMachines.Add($vmObject)
-    }
-    Else {
-        # Write warning if VM is not running, add to collection
-        Write-Warning ("VM: {0} is not running, no data collected." -f $vmObject.VMName)
-        $FSLogixVirtualMachines.Add($vmObject)
-    }
-    $i++
-}
-
-# Export data to CSV and output the path
-$FSLogixVirtualMachines | Export-Csv -Path ("{0}\FSLogixVirtualMachines.csv" -f $env:TEMP) -NoTypeInformation -Force
-Write-Host ("Results exported to CSV: {0}\FSLogixVirtualMachines.csv" -f $env:TEMP)
-
-# Display collection to the console
-$FSLogixVirtualMachines
+```PowerShell
+$Results = "Computer1","Computer2" | Get-FslVersion.ps1 -Verbose
 ```
